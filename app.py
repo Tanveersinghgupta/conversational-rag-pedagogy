@@ -5,20 +5,35 @@ st.set_page_config(page_title="Conversational RAG - Pedagogia Viva", layout="cen
 
 st.title("👩‍🏫 Assistente Pedagogico AI (Italiano/English)")
 
-# Chat memory
+# Initialize chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-user_question = st.text_area("✍️ Fai la tua domanda (in italiano o inglese):", height=100)
+# Display previous messages (Q&A pairs)
+for entry in st.session_state.chat_history:
+    q, a = entry.split("\nA: ")
 
-if st.button("Invia"):
-    if user_question.strip() != "":
-        state = {
-            "question": user_question,
-            "chat_history": st.session_state.chat_history
-        }
-        result = graph.invoke(state)
-        st.session_state.chat_history = result["chat_history"]
-        st.markdown(f"**🧠 Risposta:** {result['answer']}")
-    else:
-        st.warning("Per favore, scrivi una domanda.")
+    with st.chat_message("user"):
+        st.markdown(q[3:])  # remove "Q: "
+
+    with st.chat_message("assistant"):
+        st.markdown(a)
+
+# Get new input
+user_input = st.chat_input("✍️ Fai la tua domanda (in italiano o inglese)")
+
+if user_input:
+    state = {
+        "question": user_input,
+        "chat_history": st.session_state.chat_history
+    }
+
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    result = graph.invoke(state)
+
+    with st.chat_message("assistant"):
+        st.markdown(result["answer"])
+
+    st.session_state.chat_history = result["chat_history"]
