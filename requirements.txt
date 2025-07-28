@@ -1,0 +1,11 @@
+langchain
+langchain-community
+langchain-openai
+langgraph
+faiss-cpu
+streamlit
+python-dotenv
+langdetect
+typing_extensions
+langchain_groq
+sentence-transformers
