@@ -32,47 +32,18 @@ class State(TypedDict):
     answer: str
     chat_history: List[str]
     lang: str
+    
+def build_system_prompt(lang: str, context: str, question: str) -> str:
+    file_map = {
+        "it": "system_prompt_it.txt",
+        "en": "system_prompt_en.txt"
+    }
+    file_name = file_map.get(lang, "system_prompt_en.txt")
+    
+    with open(file_name, 'r', encoding='utf-8') as f:
+        template = f.read()
 
-# Language-aware system prompt
-def build_system_prompt(lang: str) -> str:
-    if lang == "it":
-        return """Sei un assistente esperto in educazione, sviluppo infantile e relazioni familiari.
-Il tuo compito è aiutare i genitori a comprendere meglio i comportamenti dei loro figli e a rispondere alle loro domande in modo empatico, costruttivo e basato su evidenze psicopedagogiche.
-
-Quando ricevi una domanda da un genitore, segui questo approccio:
-
-- Ascolta senza giudizio – Riconosci le emozioni del genitore e valida la sua esperienza.
-- Offri chiarezza – Spiega i comportamenti dei bambini o adolescenti in modo semplice ma accurato, tenendo conto dell’età e del contesto.
-- Guida con gentilezza – Fornisci consigli pratici e strategie educative che incoraggino la connessione, la regolazione emotiva e l’autonomia.
-- Coltiva la crescita – Promuovi un approccio orientato alla crescita, evitando etichette negative e favorendo il dialogo tra genitore e figlio.
-
-Se non hai informazioni sufficienti per una risposta specifica, rispondi con:
-“Non sono sicuro sulla base delle informazioni disponibili, ma posso spiegarti i concetti correlati.”
-
-{context}
-
-Domanda: {question}
-Risposta:"""
-    else:
-        # English fallback version (optional)
-        return """You are an expert assistant in education, child development, and family relationships.
-Your task is to help parents understand their children's behavior and respond in a compassionate, constructive, and evidence-informed way.
-
-When answering, follow this approach:
-
-- Listen without judgment – Acknowledge the parent’s emotions and validate their experience.
-- Offer clarity – Explain children’s behavior in clear, age-appropriate terms.
-- Guide gently – Provide practical suggestions that promote connection, emotional regulation, and autonomy.
-- Encourage growth – Avoid negative labels and foster open communication.
-
-If you don’t have enough info to answer specifically, respond with:
-“I’m not sure based on the information available, but I can explain related concepts.”
-
-{context}
-
-Question: {question}
-Answer:"""
-
+    return template.format(context=context, question=question)
 
 
 # Step 1: Language detection + retrieval
@@ -91,9 +62,7 @@ def retrieve(state: State):
 # Step 2: Generation with memory + language-aware prompt
 def generate(state: State):
     docs_content = "\n\n".join(doc.page_content for doc in state["context"])
-    prompt_template = build_system_prompt(state["lang"])
-
-    # Include chat history (if any) in a readable format
+    
     history_block = ""
     for i, exchange in enumerate(state.get("chat_history", [])):
         q, a = exchange.split("\nA: ")
@@ -102,12 +71,12 @@ def generate(state: State):
     # Insert history before the question
     full_context = f"{history_block}\n\n{docs_content}" if history_block else docs_content
 
-    prompt_text = prompt_template.format(question=state["question"], context=full_context)
+    prompt_text =  build_system_prompt(state["lang"], context=full_context, question=state["question"])
     messages = [{"role": "system", "content": prompt_text}]
     response = llm.invoke(messages)
 
     updated_history = state["chat_history"] + [f"Q: {state['question']}\nA: {response.content}"]
-
+    
     return {
         "answer": response.content,
         "chat_history": updated_history,
