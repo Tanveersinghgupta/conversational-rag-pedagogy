@@ -11,10 +11,10 @@ from dotenv import load_dotenv
 import os
 load_dotenv()  
 
-llm = llm = ChatGroq(
+llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=os.getenv("api_key"),
-    temperature=0,
+    temperature=0.6,
     max_tokens=None,
     timeout=None,
     max_retries=2
@@ -22,8 +22,10 @@ llm = llm = ChatGroq(
 
 embedding= HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-large")
 faiss_index = FAISS.load_local("faiss_index_store", embedding,allow_dangerous_deserialization=True)
-retriever = faiss_index.as_retriever()
-
+retriever = faiss_index.as_retriever(
+    search_type="mmr",
+    search_kwargs={'k': 3, 'fetch_k': 50}
+    )
 
 # Define state type
 class State(TypedDict):
@@ -50,7 +52,9 @@ def build_system_prompt(lang: str, context: str, question: str) -> str:
 def retrieve(state: State):
     user_question = state["question"]
     lang = detect(user_question)
-    retriever = faiss_index.as_retriever()
+    retriever = faiss_index.as_retriever(
+        search_type="mmr",
+        search_kwargs={'k': 3, 'fetch_k': 50})
     docs = retriever.get_relevant_documents(user_question)
     return {
         "question": user_question,
@@ -92,4 +96,3 @@ graph_builder.add_node("generate", generate)
 graph_builder.set_entry_point("retrieve")
 graph_builder.add_edge("retrieve", "generate")
 graph = graph_builder.compile()
-
