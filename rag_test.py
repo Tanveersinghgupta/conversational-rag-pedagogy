@@ -20,9 +20,27 @@ load_dotenv()
 
 st.set_page_config(page_title="RAG Chat (Multi-Thread)", page_icon="💬", layout="wide")
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")  
-if not GROQ_API_KEY:
-    st.warning("GROQ_API_KEY not set in environment. Set it before running.")
+# GROQ_API_KEY = os.getenv("GROQ_API_KEY")  
+# if not GROQ_API_KEY:
+#     st.warning("GROQ_API_KEY not set in environment. Set it before running.")
+
+if "groq_api_key" not in st.session_state:
+    st.session_state.groq_api_key = os.getenv("GROQ_API_KEY", "")
+
+with st.sidebar:
+    st.subheader("🔑 API Settings")
+    st.session_state.groq_api_key = st.text_input(
+        "Enter your GROQ API Key",
+        value=st.session_state.groq_api_key,
+        type="password",
+        placeholder="sk-***************",
+        key="groq_api_key_input"   # <<< UNIQUE KEY
+    )
+    if st.session_state.groq_api_key:
+        st.success("✅ API key set successfully.")
+    else:
+        st.warning("⚠️ No API key set. Please provide one.")
+
 
 @st.cache_resource(show_spinner=True)
 def load_retriever():
@@ -94,6 +112,9 @@ def build_graph(groq_api_key: str):
     graph = graph_builder.compile(checkpointer=memory)
     return graph
 
+# graph = build_graph(GROQ_API_KEY or "")
+
+GROQ_API_KEY = st.session_state.groq_api_key
 graph = build_graph(GROQ_API_KEY or "")
 
 
